@@ -1,3 +1,9 @@
+# This files contains test cases for the notes endpoints
+# These test cases evaluate the workflow of each endpoint without making any call to the database.
+# All the crud utility methods get, post put, get_all are mocked so that we don't use actuall call to database.
+# Mocked method mimic the behavior of crud utility methods.
+
+
 import json
 import logging
 
@@ -104,7 +110,7 @@ def test_update_note(test_app, monkeypatch):
     )  # if data after updated is not equal to the updated payload
 
 
-# the below test case is used to test update, when the input payload is invalid
+# the below test case is used to test update end point, when the input payload is invalid
 @pytest.mark.parametrize(
     "id, payload, status_code",
     [
