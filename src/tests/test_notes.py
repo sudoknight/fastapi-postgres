@@ -39,7 +39,12 @@ def test_create_note(test_app, monkeypatch):
 
 # this is used to test the post end point by sending a invalid input payload
 def test_create_note_invalid_json(test_app):
+    # when one field is missing
     response = test_app.post("/notes/", content=json.dumps({"title": "something"}))
+    assert response.status_code == 422
+
+    # when input text does not meet the minimum length
+    response = test_app.post("/notes/", content=json.dumps({"title": "1", "description": "2"}))
     assert response.status_code == 422
 
 
@@ -58,19 +63,25 @@ def test_read_note(test_app, monkeypatch):
     assert response.json() == test_data
 
 
-# this test is used to test the get end point
+# this test is used to test the get end point when the input id is invalid
 # we mock the get crud method so that we dont send a call to the database
 def test_read_note_incorrect_id(test_app, monkeypatch):
+    
+    # when the input id is 999
     test_data = 999
-
     async def mock_get(id):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
 
     response = test_app.get(f"/notes/{test_data}")
-    assert response.status_code == 404
+    assert response.status_code == 404  # not found
     assert response.json()["detail"] == f"Note not found for id {test_data}"
+
+    # when the input id 0 
+    test_data = 0
+    response = test_app.get(f"/notes/{test_data}")
+    assert response.status_code == 422  # validation error
 
 
 # This test case is used to test the get all notes endpoint
@@ -117,9 +128,12 @@ def test_update_note(test_app, monkeypatch):
 @pytest.mark.parametrize(
     "id, payload, status_code",
     [
-        [1, {}, 422],
-        [1, {"description": "bar"}, 422],
-        [999, {"title": "foo", "description": "bar"}, 404],
+        [1, {}, 422],  # all required fields missing
+        [1, {"description": "bar"}, 422],  # some required fields missing
+        [999, {"title": "foo", "description": "bar"}, 404],  # id not valid
+        [1, {"title": "1", "description": "bar"}, 422],  # input text not meeting validation rules
+        [1, {"title": "foo", "description": "1"}, 422],   # input text not meeting validation rules
+        [0, {"title": "foo", "description": "bar"}, 422], # input id not meeting validation rules
     ],
 )
 def test_update_not_invalid(test_app, monkeypatch, id, payload, status_code):
@@ -158,8 +172,8 @@ def test_remove_note(test_app, monkeypatch):
 # The below test is to check the delete endpoint when the input id is invalid
 def test_remove_note_incorrec_id(test_app, monkeypatch):
     
+    # when the input id is 999
     test_data = 999
-
     async def mock_get(id):
         return None
     
@@ -168,3 +182,9 @@ def test_remove_note_incorrec_id(test_app, monkeypatch):
     response = test_app.delete(f"/notes/{test_data}")
     assert response.status_code == 404
     assert response.json()["detail"] == f"Note not found for id {test_data}"
+
+    # when the input id is 0
+    test_data = 0
+    response = test_app.delete(f"/notes/{test_data}")
+    assert response.status_code == 422  # validation error
+
