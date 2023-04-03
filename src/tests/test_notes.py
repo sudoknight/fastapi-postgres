@@ -61,14 +61,16 @@ def test_read_note(test_app, monkeypatch):
 # this test is used to test the get end point
 # we mock the get crud method so that we dont send a call to the database
 def test_read_note_incorrect_id(test_app, monkeypatch):
+    test_data = 999
+
     async def mock_get(id):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    response = test_app.get("/notes/999")
+    response = test_app.get(f"/notes/{test_data}")
     assert response.status_code == 404
-    assert response.json()["detail"] == "Note not found"
+    assert response.json()["detail"] == f"Note not found for id {test_data}"
 
 
 # This test case is used to test the get all notes endpoint
@@ -111,6 +113,7 @@ def test_update_note(test_app, monkeypatch):
 
 
 # the below test case is used to test update end point, when the input payload is invalid
+# In the parametrize decorator, method input params and expected output value are passed for each test.
 @pytest.mark.parametrize(
     "id, payload, status_code",
     [
@@ -120,7 +123,7 @@ def test_update_note(test_app, monkeypatch):
     ],
 )
 def test_update_not_invalid(test_app, monkeypatch, id, payload, status_code):
-    def mock_get(id):
+    async def mock_get(id):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
@@ -129,3 +132,39 @@ def test_update_not_invalid(test_app, monkeypatch, id, payload, status_code):
         content=json.dumps(payload),
     )
     assert response.status_code == status_code
+
+
+# The below test is to check the delete end point
+# it mocks the db crud methods for get and delete.
+
+def test_remove_note(test_app, monkeypatch):
+    test_data = {"title": "something", "description": "something else", "id": 1}
+
+    async def mock_get(id):
+        return test_data
+    
+    monkeypatch.setattr(crud, "get", mock_get)
+
+    async def mock_delete(id):
+        return id
+    
+    monkeypatch.setattr(crud, "delete", mock_delete)
+
+    response = test_app.delete("/notes/1")
+    assert response.status_code == 200
+    assert response.json() == test_data
+
+
+# The below test is to check the delete endpoint when the input id is invalid
+def test_remove_note_incorrec_id(test_app, monkeypatch):
+    
+    test_data = 999
+
+    async def mock_get(id):
+        return None
+    
+    monkeypatch.setattr(crud, "get", mock_get)
+
+    response = test_app.delete(f"/notes/{test_data}")
+    assert response.status_code == 404
+    assert response.json()["detail"] == f"Note not found for id {test_data}"
